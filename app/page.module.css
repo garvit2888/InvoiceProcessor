@@ -1,0 +1,216 @@
+.main {
+    min-height: calc(100vh - 80px);
+}
+
+.hero {
+    padding: var(--spacing-xl) 0;
+    background: radial-gradient(ellipse at top, rgba(var(--primary-hue), var(--primary-sat), var(--primary-light), 0.15) 0%, transparent 50%);
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+}
+
+.heroContent {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+    animation: fadeIn 0.8s ease;
+}
+
+.title {
+    margin-bottom: var(--spacing-md);
+    line-height: 1.1;
+}
+
+.subtitle {
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-xl);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.cta {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+}
+
+.ctaIcon {
+    width: 24px;
+    height: 24px;
+}
+
+.features {
+    padding: var(--spacing-xl) 0;
+    background: var(--bg-secondary);
+}
+
+.featuresTitle {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.featureGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+}
+
+.featureCard {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    text-align: center;
+    transition: all var(--transition-base);
+    animation: fadeIn 0.6s ease forwards;
+}
+
+.featureCard:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.featureCard:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.featureCard:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.featureCard:hover {
+    transform: translateY(-8px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-lg);
+}
+
+.featureIcon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto var(--spacing-md);
+    background: var(--gradient-primary);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-base);
+}
+
+.featureCard:hover .featureIcon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.featureIcon svg {
+    width: 40px;
+    height: 40px;
+    color: white;
+}
+
+.featureCard h3 {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.featureCard p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.benefits {
+    padding: var(--spacing-xl) 0;
+}
+
+.benefitsContent {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.benefitsContent h2 {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.benefitsList {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.benefitsList li {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    animation: slideIn 0.5s ease forwards;
+}
+
+.benefitsList li:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.benefitsList li:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.benefitsList li:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.benefitsList li:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.benefitsList li:hover {
+    transform: translateX(8px);
+    border-color: var(--primary);
+}
+
+.benefitsList svg {
+    width: 24px;
+    height: 24px;
+    color: var(--success);
+    flex-shrink: 0;
+}
+
+.benefitsList span {
+    color: var(--text-primary);
+    font-size: 1.125rem;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .hero {
+        padding: var(--spacing-lg) 0;
+        min-height: 50vh;
+    }
+
+    .subtitle {
+        font-size: 1.125rem;
+    }
+
+    .featureGrid {
+        grid-template-columns: 1fr;
+    }
+}

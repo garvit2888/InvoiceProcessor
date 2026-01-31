@@ -1,0 +1,145 @@
+.uploadZone {
+    border: 3px dashed var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    background: var(--bg-secondary);
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.uploadZone::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--gradient-primary);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+    z-index: 0;
+}
+
+.uploadZone:hover::before {
+    opacity: 0.05;
+}
+
+.uploadZone:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.dragActive {
+    border-color: var(--primary);
+    background: rgba(var(--primary-hue), var(--primary-sat), var(--primary-light), 0.1);
+    transform: scale(1.02);
+}
+
+.dragActive::before {
+    opacity: 0.1;
+}
+
+.dragReject {
+    border-color: var(--error);
+    background: rgba(255, 0, 0, 0.05);
+}
+
+.uploading {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.iconContainer {
+    position: relative;
+    z-index: 1;
+}
+
+.uploadIcon {
+    width: 80px;
+    height: 80px;
+    color: var(--primary);
+    transition: all var(--transition-base);
+}
+
+.uploadZone:hover .uploadIcon {
+    transform: translateY(-5px);
+    filter: drop-shadow(0 5px 15px rgba(var(--primary-hue), var(--primary-sat), var(--primary-light), 0.4));
+}
+
+.dragActive .uploadIcon {
+    transform: scale(1.1);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.spinner {
+    width: 80px;
+    height: 80px;
+    border: 4px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.content {
+    position: relative;
+    z-index: 1;
+}
+
+.content h3 {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xs);
+    color: var(--text-primary);
+}
+
+.content p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.fileName {
+    color: var(--primary) !important;
+    font-weight: 600;
+    font-size: 1.125rem !important;
+}
+
+.fileSize {
+    color: var(--text-tertiary) !important;
+    font-size: 0.875rem !important;
+}
+
+.hint {
+    display: inline-block;
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .uploadZone {
+        padding: var(--spacing-lg);
+        min-height: 250px;
+    }
+
+    .uploadIcon,
+    .spinner {
+        width: 60px;
+        height: 60px;
+    }
+
+    .content h3 {
+        font-size: 1.25rem;
+    }
+}
