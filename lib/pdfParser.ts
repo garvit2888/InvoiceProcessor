@@ -120,31 +120,74 @@ function extractInvoiceData(text: string): InvoiceData {
         console.log('Found Date:', date);
     }
 
-    // Price patterns - look for total/gross amount
+    // Price patterns - look for total/gross amount with extended keywords
     let price = '';
-    // Look for "Total" or "Gross" followed by price
-    const totalPriceMatch = text.match(/(?:T\s*o\s*t\s*a\s*l|G\s*r\s*o\s*s\s*s).*?(\d[\d\s]{3,}\.\s*\d\s*\d)/i);
+
+    // Expanded keywords for total amount (handle spaced text)
+    const totalKeywords = [
+        'T\\s*o\\s*t\\s*a\\s*l',
+        'G\\s*r\\s*o\\s*s\\s*s',
+        'G\\s*r\\s*a\\s*n\\s*d\\s*T\\s*o\\s*t\\s*a\\s*l',
+        'P\\s*a\\s*y\\s*a\\s*b\\s*l\\s*e',
+        'A\\s*m\\s*o\\s*u\\s*n\\s*t',
+        'N\\s*e\\s*t'
+    ].join('|');
+
+    // Regex to find price after a keyword
+    // Matches keyword, optional text (non-greedy), then a number with decimals
+    const priceRegex = new RegExp(`(?:${totalKeywords}).{0,100}?(\\d[\\d\\s,]*\\.\\s*\\d\\s*\\d)`, 'i');
+
+    const totalPriceMatch = text.match(priceRegex);
+
     if (totalPriceMatch) {
-        const cleanPrice = totalPriceMatch[1].replace(/\s+/g, '');
+        // Clean up the price - remove spaces and commas
+        const cleanPrice = totalPriceMatch[1].replace(/[\s,]+/g, '');
         const numPrice = parseFloat(cleanPrice);
-        if (numPrice > 50 && numPrice < 100000) {
+
+        // Basic validation - price should be reasonable
+        // Lower bound 10 to catch small orders, upper bound 500k
+        if (numPrice > 10 && numPrice < 500000) {
             price = '₹' + cleanPrice;
-            console.log('Found Total Price:', price);
+            console.log('Found Total Price via Keyword:', price);
         }
     }
 
-    // If no total found, look for any price-like number
+    // Fallback: If no keyword match, look for any price-like number
+    // But be smarter: avoid phone numbers (usually no decimals) or IDs
     if (!price) {
-        const priceMatches = text.match(/(\d[\d\s]{3,}\.?\s*\d\s*\d)/g);
-        if (priceMatches) {
-            // Get the last significant price (usually the total)
-            for (let i = priceMatches.length - 1; i >= 0; i--) {
-                const cleanPrice = priceMatches[i].replace(/\s+/g, '');
+        console.log('No keyword price found, attempting fallback...');
+
+        // Match numbers that definitely look like currency (2 decimals)
+        // Format: 1,234.56 or 1234.56 or 1 2 3 4 . 5 6
+        const potentialPrices = text.match(/(\d[\d\s,]*\.\s*\d\s*\d)/g);
+
+        if (potentialPrices) {
+            // Check candidates from end to start (total is usually at bottom)
+            for (let i = potentialPrices.length - 1; i >= 0; i--) {
+                const rawPrice = potentialPrices[i];
+                // Clean: remove spaces and commas
+                const cleanPrice = rawPrice.replace(/[\s,]+/g, '');
                 const numPrice = parseFloat(cleanPrice);
-                if (numPrice > 100 && numPrice < 100000) {
-                    price = '₹' + cleanPrice;
-                    console.log('Found Price:', price);
-                    break;
+
+                // Extra validation for fallback
+                // 1. Must be valid number
+                // 2. Must not be too large (likely not an ID/phone if it has decimals)
+                // 3. Must be reasonable amount (> 50)
+                if (!isNaN(numPrice) && numPrice > 50 && numPrice < 500000) {
+
+                    // Double check it's not a phone number masquerading (though decimals usually prevent this)
+                    // If it has a comma, it's very likely a price
+                    const hasComma = rawPrice.includes(',');
+                    // If it follows 'Rs' or 'INR' or symbol
+                    const indexInText = text.lastIndexOf(rawPrice);
+                    const precedingText = text.substring(Math.max(0, indexInText - 20), indexInText);
+                    const hasCurrencySymbol = /R\s*s|I\s*N\s*R|₹/.test(precedingText);
+
+                    if (hasComma || hasCurrencySymbol || i === potentialPrices.length - 1) {
+                        price = '₹' + cleanPrice;
+                        console.log('Found Price via Fallback:', price, 'Raw:', rawPrice);
+                        break;
+                    }
                 }
             }
         }
