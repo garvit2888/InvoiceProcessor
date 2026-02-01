@@ -44,7 +44,16 @@ export async function GET(request: Request) {
 
         if (dailyRows.length === 0) {
             console.log('No invoices found for yesterday.');
-            return NextResponse.json({ message: 'No invoices logged yesterday.' });
+            return NextResponse.json({
+                message: 'No invoices logged yesterday.',
+                debug: {
+                    serverTime: now.toISOString(),
+                    serverIST: istNow.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }),
+                    yesterdayTarget: yesterdayStr,
+                    firstRowDate: dataRows.length > 0 ? dataRows[0][7] : 'No Data',
+                    firstRowParsed: dataRows.length > 0 ? new Date(dataRows[0][7]).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A'
+                }
+            });
         }
 
         console.log(`Found ${dailyRows.length} invoices.`);
