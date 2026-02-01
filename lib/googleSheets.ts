@@ -560,3 +560,27 @@ export async function logRevenueTransaction(
     }
 }
 
+/**
+ * Fetch all invoice logs from Sheet1
+ */
+export async function getInvoiceLogs(): Promise<string[][]> {
+    const rawId = process.env.GOOGLE_SHEET_ID;
+    if (!rawId) throw new Error('GOOGLE_SHEET_ID not set');
+
+    // Sanitize (remove quotes and spaces)
+    const sheetId = rawId.replace(/['"\s]/g, '');
+
+    const sheets = getGoogleSheetsClient();
+    try {
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: sheetId,
+            range: 'Sheet1!A:H', // Columns A to H (Logged At is H)
+        });
+
+        return response.data.values || [];
+    } catch (error) {
+        console.error('Error fetching invoice logs:', error);
+        throw error; // Throw so we can see the real error in API response
+    }
+}
+
