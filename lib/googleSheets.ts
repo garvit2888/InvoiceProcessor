@@ -50,6 +50,16 @@ export async function appendToSheet(invoiceData: InvoiceData): Promise<void> {
         // Continue logging invoice even if count update fails
     }
 
+    // Log Revenue Transaction (Transaction Log Model)
+    try {
+        if (invoiceData.itemName && invoiceData.itemName !== 'N/A') {
+            const settlementPrice = await getSettlementPrice(invoiceData.itemName);
+            await logRevenueTransaction(invoiceData, settlementPrice);
+        }
+    } catch (error) {
+        console.error('Failed to log revenue transaction:', error);
+    }
+
     // Prepare row data
     const values = [
         [
@@ -236,8 +246,10 @@ export async function incrementSalesCount(productName: string): Promise<StockUpd
     const sheets = getGoogleSheetsClient();
 
     try {
-        // Ensure sales sheet exists
+        // Ensure sales, settlements, and revenue sheets exist
         await initializeSalesSheet();
+        // Fire and forget settlement/revenue init (don't block heavily)
+        Promise.all([initializeSettlementsSheet(), initializeRevenueSheet()]).catch(console.error);
 
         // Get current count
         const currentCount = await getProductSalesCount(productName);
@@ -318,6 +330,233 @@ export async function incrementSalesCount(productName: string): Promise<StockUpd
             newStock: 0,
             error: error instanceof Error ? error.message : 'Unknown error',
         };
+    }
+}
+
+/**
+ * Initialize Settlements sheet with headers and default products
+ */
+export async function initializeSettlementsSheet(): Promise<void> {
+    const sheetId = process.env.GOOGLE_SHEET_ID;
+
+    if (!sheetId) {
+        throw new Error('GOOGLE_SHEET_ID environment variable is not set');
+    }
+
+    const sheets = getGoogleSheetsClient();
+
+    try {
+        const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: sheetId,
+        });
+
+        const settlementsSheet = spreadsheet.data.sheets?.find(
+            (sheet) => sheet.properties?.title === 'Settlements'
+        );
+
+        if (!settlementsSheet) {
+            // Create Settlements Sheet
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: sheetId,
+                requestBody: {
+                    requests: [
+                        {
+                            addSheet: {
+                                properties: {
+                                    title: 'Settlements',
+                                    gridProperties: {
+                                        frozenRowCount: 1,
+                                    }
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+
+            // Product list provided by user (14 items)
+            const products = [
+                "Voeux-Ambient",
+                "Voeux-Diamond-464",
+                "Voeux-Goldenbody",
+                "Voeux-X80PREMIUM",
+                "Voeux-Piano-Singleknob",
+                "Voeux-TS7-264",
+                "Voeux-6inch",
+                "Voeux-Diamond-X80",
+                "VOEUX-BLACKBODY",
+                "Voeux-TS7-232",
+                "Voeux-AmbientPremium",
+                "Voeux-PianoDualKnob",
+                "Voeux-SVX0377BT",
+                "Voeux-MiddleKnob-Piano"
+            ];
+
+            // Prepare data: Headers + Products (with empty settlement amount)
+            const values = [
+                ['Product Name', 'Settlement Amount (Net Revenue)'],
+                ...products.map(p => [p, '0']) // Default to 0, user updates it
+            ];
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId: sheetId,
+                range: 'Settlements!A1:B' + (values.length + 1),
+                valueInputOption: 'USER_ENTERED',
+                requestBody: {
+                    values: values,
+                },
+            });
+
+            console.log('Settlements sheet initialized with products');
+        }
+    } catch (error) {
+        console.error('Error initializing settlements sheet:', error);
+        throw new Error('Failed to initialize settlements sheet');
+    }
+}
+
+/**
+ * Initialize Revenue sheet as a Transaction Log
+ */
+export async function initializeRevenueSheet(): Promise<void> {
+    const sheetId = process.env.GOOGLE_SHEET_ID;
+
+    if (!sheetId) {
+        throw new Error('GOOGLE_SHEET_ID environment variable is not set');
+    }
+
+    const sheets = getGoogleSheetsClient();
+
+    try {
+        const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: sheetId,
+        });
+
+        const revenueSheet = spreadsheet.data.sheets?.find(
+            (sheet) => sheet.properties?.title === 'Revenue'
+        );
+
+        if (!revenueSheet) {
+            // Create Revenue Sheet
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: sheetId,
+                requestBody: {
+                    requests: [
+                        {
+                            addSheet: {
+                                properties: {
+                                    title: 'Revenue',
+                                    gridProperties: {
+                                        frozenRowCount: 2, // Freeze headers and totals
+                                    }
+                                },
+                            },
+                        },
+                    ],
+                },
+            });
+
+            // Row 1: Grand Total Summary
+            // Row 2: Headers for Transaction Log
+            const initialData = [
+                ['GRAND TOTAL NET REVENUE', '=SUM(F3:F)'], // Sum of Net Revenue column
+                ['Order ID', 'Date', 'Product Name', 'Flipkart Selling Price', 'Settlement Price', 'Net Revenue'],
+            ];
+
+            await sheets.spreadsheets.values.update({
+                spreadsheetId: sheetId,
+                range: 'Revenue!A1:F2',
+                valueInputOption: 'USER_ENTERED',
+                requestBody: {
+                    values: initialData,
+                },
+            });
+
+            console.log('Revenue sheet initialized as Transaction Log');
+        }
+    } catch (error) {
+        console.error('Error initializing revenue sheet:', error);
+    }
+}
+
+/**
+ * Get settlement price for a product from Settlements sheet
+ */
+export async function getSettlementPrice(productName: string): Promise<number> {
+    const sheetId = process.env.GOOGLE_SHEET_ID;
+    if (!sheetId) return 0;
+
+    const sheets = getGoogleSheetsClient();
+    try {
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: sheetId,
+            range: 'Settlements!A:B',
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length <= 1) return 0;
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (row[0] && row[0].toLowerCase() === productName.toLowerCase()) {
+                // Parse price, handling currency symbols if user entered them
+                const priceStr = row[1]?.toString().replace(/[^0-9.]/g, '') || '0';
+                return parseFloat(priceStr);
+            }
+        }
+    } catch (error) {
+        console.error('Error getting settlement price:', error);
+    }
+    return 0; // Default to 0 if not found or error
+}
+
+/**
+ * Log a revenue transaction
+ */
+export async function logRevenueTransaction(
+    invoiceData: InvoiceData,
+    settlementPrice: number
+): Promise<void> {
+    const sheetId = process.env.GOOGLE_SHEET_ID;
+    if (!sheetId) throw new Error('GOOGLE_SHEET_ID not set');
+
+    const sheets = getGoogleSheetsClient();
+
+    try {
+        // Ensure revenue sheet exists
+        await initializeRevenueSheet();
+
+        // Calculate Net Revenue (Currently equal to settlement price as per logic)
+        // If we needed logic like (SellingPrice - Commission = Net), we'd do it here.
+        // User asked: "calculate the revenue generated after giving commision to flipkart i will provide you settlement which i get"
+        // So Settlement Price IS the Net Revenue.
+        const netRevenue = settlementPrice;
+
+        const values = [
+            [
+                invoiceData.orderId,
+                invoiceData.date,
+                invoiceData.itemName,
+                invoiceData.price, // Flipkart Selling Price
+                settlementPrice,   // Locked-in Settlement Price
+                netRevenue
+            ]
+        ];
+
+        await sheets.spreadsheets.values.append({
+            spreadsheetId: sheetId,
+            range: 'Revenue!A:F',
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: values,
+            },
+        });
+
+        console.log(`Logged revenue transaction for ${invoiceData.orderId}: Net ${netRevenue}`);
+
+    } catch (error) {
+        console.error('Error logging revenue transaction:', error);
+        // Don't fail the whole upload if revenue logging fails
     }
 }
 
